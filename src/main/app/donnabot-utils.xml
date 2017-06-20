@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:http="http://www.mulesoft.org/schema/mule/http"
 	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
 	xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore"
 	  xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" 
@@ -11,7 +11,8 @@
 http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
 http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
     <flow name="crearMensaje" processingStrategy="synchronous">
         <component class="com.github.estebanwasinger.MessageCreator" doc:name="Crear Mensaje"/>
     </flow>
@@ -127,6 +128,9 @@ flowVars.menu map ((val , key) -> {
         </dw:transform-message>
     </flow>
      <flow name="CreateEntireMessage" processingStrategy="synchronous">
+        <enricher source="#[payload]" target="#[flowVars.menuPrecios]" doc:name="payload -&gt; flowVars.menuPrecios">
+            <flow-ref name="getPreciosAttachment" doc:name="getPreciosAttachment"/>
+        </enricher>
         <enricher source="#[payload]" target="#[flowVars.buttons]" doc:name="payload -&gt; flowVars.buttons">
             <flow-ref name="Create-Button-Attachments" doc:name="Create-Button-Attachments"/>
         </enricher>
@@ -149,6 +153,8 @@ flowVars.menu map ((val , key) -> {
 %var getConditional = (condition, soThen, orOtherwise) -> soThen when (condition) otherwise orOtherwise
 %var defaultMessage = '<@$(flowVars.organizador)>'
 ---
+flowVars.menuPrecios
+++
 flowVars.buttons
 ++ 
 [
@@ -163,6 +169,20 @@ flowVars.buttons
 		mrkdwn_in: ["text", "pretext"]
 	}
 ]]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="getPreciosAttachment" processingStrategy="synchronous">
+        <flow-ref name="getMenu" doc:name="getMenu"/>
+        <dw:transform-message doc:name="create-menu-attachment" metadata:id="5641e288-1c90-4cd8-ab71-690e47df1bde">
+            <dw:input-payload doc:sample="/Users/estebanwasinger/AnypointStudio/workspace602/donna-bot-maven/src/main/resources/menu.json" mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+[{
+	text: "*Menu* : \n " ++ (flowVars.menu[-1 to 0] reduce ((val, acc = "\n") -> '*»* :$(val.emoji): $(val.name): \$$(val.price) \n $(acc)')),
+	mrkdwn_in: ["text", "pretext"]
+}]
+]]></dw:set-payload>
         </dw:transform-message>
     </flow>
     <flow name="ObtenerOrganizador">
@@ -242,7 +262,7 @@ payload.channel.id]]></dw:set-payload>
             <http:request-builder>
                 <http:query-param paramName="token" value="${slack.token}"/>
                 <http:query-param paramName="channel" value="#[payload]"/>
-                <http:query-param paramName="text" value="#['Sos organizador! La pagina de administraci&#243;n es https://donna-bot-mock.cloudhub.io/pane?id=' + flowVars.UUID]"/>
+                <http:query-param paramName="text" value="#['Sos organizador! La pagina de administraci&#243;n es https://donna-bot.cloudhub.io/pane?id=' + flowVars.UUID]"/>
             </http:request-builder>
         </http:request>
     </flow>

@@ -36,16 +36,6 @@ public class Fila {
         this.fechas = fechas;
     }
 
-//    <tr>
-//    <td>RealName</td>
-//    <td>Pedidos</td>
-//    <td>Fecha Pedidos</td>
-//    <td>Total</td>
-//    <td>
-//        <button class="%s" id="%s" onClick="pagar('%s')">%s</button>
-//    </td>
-//</tr>
-
 
     @NotNull
     private String getText() {

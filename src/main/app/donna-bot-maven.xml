@@ -19,12 +19,12 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
 http://www.mulesoft.org/schema/mule/schedulers http://www.mulesoft.org/schema/mule/schedulers/current/mule-schedulers.xsd
 http://www.mulesoft.org/schema/mule/quartz http://www.mulesoft.org/schema/mule/quartz/current/mule-quartz.xsd">
-     <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
-     <!-- <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="${https.port}" doc:name="HTTP Listener Configuration" protocol="HTTPS">
+     <!-- <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>  -->
+     <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="${https.port}" doc:name="HTTP Listener Configuration" protocol="HTTPS">
         <tls:context>
             <tls:key-store path="serverKeystore" keyPassword="mulepassword" password="mulepassword"/>
         </tls:context>
-     </http:listener-config>  -->
+     </http:listener-config>
     <http:request-config name="HTTP_Request_Configuration" protocol="HTTPS" host="slack.com" port="443" basePath="/api" doc:name="HTTP Request Configuration"/>
     <objectstore:config name="ObjectStore__Connector" persistent="true" doc:name="ObjectStore: Connector"/>
     <flow name="ReceiveButtonNotification">
@@ -118,11 +118,15 @@ payload.channel_id]]></dw:set-variable>
         <set-payload value="#[&quot;&quot;]" doc:name="Empty Response"/>
     </flow>
     <flow name="createInitialMessage" processingStrategy="synchronous">
+        <enricher source="#[payload]" target="#[flowVars.menuPrecios]" doc:name="Message Enricher">
+            <flow-ref name="getPreciosAttachment" doc:name="getPreciosAttachment"/>
+        </enricher>
         <flow-ref name="Create-Button-Attachments" doc:name="Create-Button-Attachments"/>
         <dw:transform-message doc:name="Add Pedidos y Total">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/json
 ---
+flowVars.menuPrecios ++
 payload ++ 
 [
 	{
