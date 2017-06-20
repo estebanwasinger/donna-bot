@@ -1,0 +1,11 @@
+{
+    "inputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "ButtonNotification"
+        }
+    },
+    "outputMessageMetadata": {},
+    "id": "5f2f2529-1a5e-4803-8536-e46eec17840b",
+    "version": "5.2.0.0"
+}

@@ -1,0 +1,64 @@
+[
+  {
+    "name": "Menu",
+    "text": ":curry: Katsukare",
+    "type": "button",
+    "value": "Katsukare"
+  },
+  {
+    "name": "Menu",
+    "text": ":stew: Tonkatsu",
+    "type": "button",
+    "value": "Tonkatsu"
+  },
+  {
+    "name": "Menu",
+    "text": ":sushi: Sushi 8 Piezas",
+    "type": "button",
+    "value": "Sushi 8 Piezas"
+  },
+  {
+    "name": "Menu",
+    "text": ":sushi: Sushi 12 (Rolls)",
+    "type": "button",
+    "value": "Sushi 12 (Rolls)"
+  },
+  {
+    "name": "Menu",
+    "text": ":sushi: Sushi 12 (Rolls + Nigiri)",
+    "type": "button",
+    "value": "Sushi 12 (Rolls + Nigiri)"
+  },
+  {
+    "name": "Menu",
+    "text": ":ensalada: Ens. Salmon Cocido",
+    "type": "button",
+    "value": "Ens. Salmon Cocido"
+  },
+  {
+    "name": "Menu",
+    "text": ":ensalada: Ens. Salmon Fresco",
+    "type": "button",
+    "value": "Ens. Salmon Fresco"
+  },
+  {
+    "name": "Menu",
+    "text": ":curry: Kare Raisu",
+    "type": "button",
+    "value": "Kare Raisu"
+  },
+  {
+    "text": ":x: Borrar Mi Pedido",
+    "type": "button",
+    "value": "Delete",
+    "name": "Delete",
+    "style": "danger"
+  },
+  {
+    "text": ":telephone_receiver: Ser Organizador",
+    "type": "button",
+    "value": "Organizar",
+    "name": "Organizar",
+    "style": "primary"
+  }
+]

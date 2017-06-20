@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<!--
+Created using JS Bin
+http://jsbin.com
+
+Copyright (c) 2017 by anonymous (http://jsbin.com/fexodogaqo/1/edit)
+
+Released under the MIT license: http://jsbin.mit-license.org
+-->
+<meta name="robots" content="noindex">
+<html>
+<head>
+    <link rel=stylesheet
+          href="https://mulesoft.github.io/mulesoft-styles/styles/docs.css">
+    <script src="https://fb.me/react-with-addons-15.1.0.js"></script>
+    <script src="https://fb.me/react-dom-15.1.0.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="minimum-scale=1.0, width=device-width, maximum-scale=1.0, user-scalable=no"/>
+    <title>Donna Bot - Admin page</title>
+</head>
+<body>
+<div class="flex-row">
+    <div class="flex-auto padding-base panel panel-default">
+        <div background-color="white" id="react-container"></div>
+        <table id="tableDemo" class="table table-featured table-hover">
+            <thead>
+            <tr>
+                <th colspan>Persona</th>
+                <th colspan>Pedido</th>
+                <th colspan>Hora del Pedido</th>
+                <th colspan>Total</th>
+                <th colspan=></th>
+            </tr>
+            </thead>
+            <tbody>
+            %s
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="flex-row">
+</div>
+
+<script id="jsbin-javascript">
+const dish = React.createElement("h1", null, "Donna Bot // Admin Page")
+
+ReactDOM.render(
+  dish,
+  document.getElementById('react-container')
+)
+
+
+function pagar(userId)
+{
+ var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open( "GET", './pedidos/' + userId +'?id=%s', false ); // false for synchronous request
+    xmlHttp.send( null );
+
+    button = document.getElementById(userId)
+    button.innerText = 'Pagado'
+    button.setAttribute('class', 'btn btn-default')
+    return xmlHttp.responseText;
+}
+
+
+</script>
+</body>
+</html>

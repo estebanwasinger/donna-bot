@@ -1,0 +1,17 @@
+[
+  {
+    "callback_id": "wopr_game",
+    "fallback": "You are unable to choose a game",
+    "text": "Elegí tu plato del día\n Tonkatsu <@U03NE28RL>",
+    "actions": [
+      {
+        "id": "1",
+        "name": "plato",
+        "text": ":curry: Katsukare",
+        "type": "button",
+        "value": "Katsukare",
+        "style": ""
+      }
+    ]
+  }
+]

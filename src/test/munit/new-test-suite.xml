@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:mock="http://www.mulesoft.org/schema/mule/mock" xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
+http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/mock/current/mule-mock.xsd">
+    <munit:config name="munit" doc:name="MUnit configuration"/>
+    <spring:beans>
+        <spring:import resource="classpath:donna-bot-maven.xml"/>
+    </spring:beans>
+    <munit:before-test name="new-test-suiteBefore_Test" description="Before tests actions">
+        <objectstore:remove config-ref="ObjectStore__Connector" key="pedidos" ignoreNotExists="true" doc:name="ObjectStore"/>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock HTTP Slack chat Update">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Slack - chat.update']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#['Authorized']"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock getPedidos">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['getPedidos']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Change Pay Status']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+        <mock:when messageProcessor=".*:.*" doc:name="Mock Create Message">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['CreateEntireMessage']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[]"/>
+        </mock:when>
+    </munit:before-test>
+    <munit:test name="new-test-suite-AgregarNuevoPedidoTest" description="Test">
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	actions: [{
+		value: "Katsukare"
+	}],
+	user: {
+		id: 'USERID',
+		name: 'Esteban Wasinger'
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <flow-ref name="AgregarNuevoPedido" doc:name="Flow-ref to AgregarNuevoPedido"/>
+                <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	actions: [{
+		value: "Katsukare"
+	}],
+	user: {
+		id: 'USERID',
+		name: 'Esteban Wasinger'
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <flow-ref name="AgregarNuevoPedido" doc:name="Flow-ref to AgregarNuevoPedido"/>
+        <objectstore:retrieve config-ref="ObjectStore__Connector" key="pedidos" doc:name="ObjectStore"/>
+        <munit:assert-true condition="#[payload.get(&quot;USERID&quot;).size() == 2]" doc:name="Assert True"/>
+    </munit:test>
+
+    <munit:test name="Authorized User can pay" description="MUnit Test">
+        <objectstore:store config-ref="ObjectStore__Connector" key="Org-UUID" value-ref="#['UUID']" overwrite="true" doc:name="ObjectStore"/>
+        <munit:set payload="#['The Payload']" doc:name="Set Message">
+            <munit:inbound-properties>
+                <munit:inbound-property key="http.query.params" value="#[['user_id': 'dsa', 'id': 'UUID']]"/>
+            </munit:inbound-properties>
+        </munit:set>
+        <flow-ref name="/pagar" doc:name="/pagar"/>
+        <mock:verify-call messageProcessor=".*:.*" doc:name="Verify Call">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['flowVars.user_id']"/>
+            </mock:with-attributes>
+        </mock:verify-call>
+    </munit:test>
+    
+    <munit:test name="Unauthorized User can not pay" description="MUnit Test">
+        <objectstore:store config-ref="ObjectStore__Connector" key="Org-UUID" value-ref="#['Wrong UUID']" overwrite="true" doc:name="ObjectStore"/>
+        <munit:set payload="#['The Payload']" doc:name="Set Message">
+            <munit:inbound-properties>
+                <munit:inbound-property key="http.query.params" value="#[['user_id': 'dsa', 'id': 'UUID']]"/>
+            </munit:inbound-properties>
+        </munit:set>
+        <flow-ref name="/pagar" doc:name="/pagar"/>
+        <mock:verify-call messageProcessor=".*:.*" doc:name="Verify Call">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Unauthorized']"/>
+            </mock:with-attributes>
+        </mock:verify-call>
+    </munit:test>
+</mule>

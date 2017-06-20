@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://fb.me/react-with-addons-15.1.0.js"></script>
+    <script src="https://fb.me/react-dom-15.1.0.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="minimum-scale=1.0, width=device-width, maximum-scale=1.0, user-scalable=no" />
+    <title>Learning React Chapter 4 Samples</title>
+</head>
+<body>
+<div id="react-container"></div>
+</body>
+
+<script id="jsbin-javascript">
+
+var items = [
+    "1 lb Salmon",
+    "1 cup Pine Nuts",
+    "2 cups Butter Lettuce",
+    "1 Yellow Squash",
+    "1/2 cup Olive Oil",
+    "3 cloves of Garlic"
+]
+
+var pedidos = {
+  "U03NE28RL": {
+    "platos": [
+      {
+        "fechaPedido": {
+          "year": 2017,
+          "dayOfYear": 161,
+          "nano": 858000000,
+          "minute": 29,
+          "second": 31,
+          "dayOfWeek": "SATURDAY",
+          "month": "JUNE",
+          "hour": 16,
+          "dayOfMonth": 10,
+          "monthValue": 6
+        },
+        "plato": "Katsukare"
+      },
+      {
+        "fechaPedido": {
+          "year": 2017,
+          "dayOfYear": 161,
+          "nano": 781000000,
+          "minute": 29,
+          "second": 34,
+          "dayOfWeek": "SATURDAY",
+          "month": "JUNE",
+          "hour": 16,
+          "dayOfMonth": 10,
+          "monthValue": 6
+        },
+        "plato": "Tonkatsu"
+      },
+      {
+        "fechaPedido": {
+          "year": 2017,
+          "dayOfYear": 161,
+          "nano": 34000000,
+          "minute": 29,
+          "second": 37,
+          "dayOfWeek": "SATURDAY",
+          "month": "JUNE",
+          "hour": 16,
+          "dayOfMonth": 10,
+          "monthValue": 6
+        },
+        "plato": "Katsukare"
+      }
+    ],
+    "paid": false
+  }
+}
+
+var pedidosString = []
+
+for(var user in pedidos) {
+    var platos = pedidos[user].platos.map((item) => item.plato + " ")
+    pedidosString.push(user + " " + platos)
+}
+
+var elements = React . createElement ( "ul" , { className : "ingredients" }, pedidosString . map (( ingredient , i ) => React . createElement ( "li" , { key : i }, ingredient ) ))
+ReactDOM.render( elements,
+  document.getElementById('react-container')
+)
+
+console.log('dish', elements)
+</script>
+</html>

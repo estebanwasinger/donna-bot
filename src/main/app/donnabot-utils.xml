@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore"
+	  xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" 
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+    <flow name="crearMensaje" processingStrategy="synchronous">
+        <component class="com.github.estebanwasinger.MessageCreator" doc:name="Crear Mensaje"/>
+    </flow>
+        <flow name="getMenu">
+        <enricher source="#[payload]" target="#[flowVars.menu]" doc:name="payload -&gt; flowVars.menu">
+            <processor-chain doc:name="Processor Chain">
+                <objectstore:contains config-ref="ObjectStore__Connector" key="menuJson" doc:name="Contains [menuJson]"/>
+                <choice doc:name="Exists?">
+                    <when expression="#[payload]">
+                        <objectstore:retrieve config-ref="ObjectStore__Connector" key="menuJson" doc:name="Retrieve [menuJson]"/>
+                    </when>
+                    <otherwise>
+                        <component class="com.github.estebanwasinger.Menu" doc:name="Get Menu"/>
+                    </otherwise>
+                </choice>
+                <set-payload value="#[payload]" mimeType="application/json" doc:name="to application/json"/>
+            </processor-chain>
+        </enricher>
+    </flow>
+    
+        <flow name="GetCachedUsuarios">
+        <enricher source="#[payload]" target="#[flowVars.userList]" doc:name="Message Enricher">
+            <processor-chain doc:name="Processor Chain">
+                <objectstore:contains config-ref="ObjectStore__Connector" key="users.list" doc:name="Contains [users.list]"/>
+                <choice doc:name="Choice">
+                    <when expression="">
+                        <objectstore:retrieve config-ref="ObjectStore__Connector" key="users.list" doc:name="ObjectStore"/>
+                    </when>
+                    <otherwise>
+                        <flow-ref name="GetUsuarios" doc:name="Flow Reference"/>
+                    </otherwise>
+                </choice>
+            </processor-chain>
+        </enricher>
+    </flow>
+    <flow name="GetUsuarios">
+        <http:request config-ref="HTTP_Request_Configuration" path="/users.list" method="GET" doc:name="Slack -- /users.list">
+            <http:request-builder>
+                <http:query-param paramName="token" value="${slack.token}"/>
+            </http:request-builder>
+        </http:request>
+        <dw:transform-message metadata:id="e150fa83-2385-4673-8c22-823da0e35de4" doc:name="Clean Up">
+            <dw:input-payload doc:sample="users.list.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload.members map (val, pos) -> {
+	(val.id) : {
+		name : val.name,
+		real_name : val.real_name
+	}
+} reduce ((val, acc = {}) -> acc ++ val)
+]]></dw:set-payload>
+        </dw:transform-message>
+        <objectstore:store config-ref="ObjectStore__Connector" key="users.list" value-ref="#[payload]" overwrite="true" doc:name="ObjectStore"/>
+    </flow>
+    
+     <flow name="getPedidos">
+        <enricher source="#[payload]" target="#[flowVars.pedidos]" doc:name="Message Enricher">
+            <objectstore:retrieve config-ref="ObjectStore__Connector" key="pedidos" defaultValue-ref="#[new java.util.HashMap()]" doc:name="Get Pedidos"/>
+        </enricher>
+    </flow>
+        <flow name="Create-Button-Attachments" processingStrategy="synchronous">
+        <flow-ref name="getMenu" doc:name="getMenu"/>
+        <dw:transform-message metadata:id="8f860711-d493-4596-a006-b4230e6a8bd2" doc:name="Create Actions">
+            <dw:input-payload doc:sample="menu.json"/>
+            <dw:input-variable variableName="menu"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+flowVars.menu map ((val , key) -> {
+	name: "Menu",
+	text: ":" ++ val.emoji ++ ": " ++ val.name,
+	type: 'button',
+	value: val.name
+}) ++
+[
+	{
+		text : ":x: Borrar Mi Pedido",
+		type : 'button',
+		value : "Delete",
+		name : "Delete",
+		style: "danger"
+	},
+	{
+		text : ":telephone_receiver: Ser Organizador",
+		type : 'button',
+		value : "Organizar",
+		name : "Organizar",
+		style: "primary"
+	}
+] ]]></dw:set-payload>
+        </dw:transform-message>
+        <dw:transform-message metadata:id="61754b19-5c4a-411f-ad84-87ee98fe46d9" doc:name="Create  Button Attachments">
+            <dw:input-payload doc:sample="buttons.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+%var getConditional = (condition, soThen, orOtherwise) -> soThen when (condition) otherwise orOtherwise
+%var elements = payload
+%var pageSize = 5
+%var lastPageNumber = ((sizeOf elements) / pageSize)[0] as :number
+%var lastPageSize = (sizeOf elements) mod pageSize
+%var buttons = (elements map (key, pos) -> elements[pos*pageSize to getConditional(pos == lastPageNumber, pos*pageSize + lastPageSize-1,pos*pageSize + pageSize-1)]) filter ($ != null)
+---
+((getConditional((sizeOf buttons) > lastPageSize, buttons[0 to -2], buttons))
+	map {
+    actions : $,
+    callback_id: "Elegir Plato",
+    fallback: "Elegir Plato",
+    color : "#ffd000"
+})
+]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+     <flow name="CreateEntireMessage" processingStrategy="synchronous">
+        <enricher source="#[payload]" target="#[flowVars.buttons]" doc:name="payload -&gt; flowVars.buttons">
+            <flow-ref name="Create-Button-Attachments" doc:name="Create-Button-Attachments"/>
+        </enricher>
+        <enricher source="#[payload]" target="#[flowVars.message]" doc:name="payload -&gt; flowVars.message">
+            <processor-chain doc:name="Processor Chain">
+                <flow-ref name="getPedidos" doc:name="getPedidos"/>
+                <set-payload value="#[flowVars.pedidos]" doc:name="Set Payload"/>
+                <flow-ref name="crearMensaje" doc:name="crearMensaje"/>
+            </processor-chain>
+        </enricher>
+        <enricher source="#[flowVars.order]" target="#[flowVars.order]" doc:name="flowVars.order">
+            <flow-ref name="CalculateOrder" doc:name="CalculateOrder"/>
+        </enricher>
+        <enricher source="#[flowVars.organizador]" target="#[flowVars.organizador]" doc:name="flowVars.organizador">
+            <flow-ref name="ObtenerOrganizador" doc:name="ObtenerOrganizador"/>
+        </enricher>
+        <dw:transform-message doc:name="Create Json Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+%var getConditional = (condition, soThen, orOtherwise) -> soThen when (condition) otherwise orOtherwise
+%var defaultMessage = '<@$(flowVars.organizador)>'
+---
+flowVars.buttons
+++ 
+[
+	{
+		text : flowVars.message, 
+		color: "#68ff11",
+		mrkdwn_in: ["text", "pretext"]
+	},
+	{
+		text : flowVars.order ++ '\n *Organizador: * ' ++ getConditional(flowVars.organizador != '', defaultMessage, ' - '),
+		color : "#68ff11",
+		mrkdwn_in: ["text", "pretext"]
+	}
+]]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="ObtenerOrganizador">
+        <objectstore:retrieve config-ref="ObjectStore__Connector" key="organizador" defaultValue-ref="#[&quot;&quot;]" targetProperty="organizador" doc:name="ObjectStore"/>
+    </flow>
+        <flow name="AgregarNuevoPedido" processingStrategy="synchronous">
+        <dw:transform-message metadata:id="5659b116-b54a-4eb5-aa94-92effcb8dc69" doc:name="Transform Message">
+            <dw:input-payload doc:sample="/Users/estebanwasinger/Desktop/response.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	menu : payload.actions[0].value,
+	user : payload.user.id
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <flow-ref name="getPedidos" doc:name="getPedidos"/>
+        <component class="com.github.estebanwasinger.Converter" doc:name="Agregar Nuevo Pedido"/>
+        <objectstore:store config-ref="ObjectStore__Connector" key="pedidos" value-ref="#[payload]" overwrite="true" doc:name="ObjectStore"/>
+    </flow>
+    <flow name="borrarPedidos" processingStrategy="synchronous">
+        <dw:transform-message metadata:id="5659b116-b54a-4eb5-aa94-92effcb8dc69" doc:name="Copy_of_Transform Message">
+            <dw:input-payload doc:sample="/Users/estebanwasinger/Desktop/response.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	menu : payload.actions[0].value,
+	user : payload.user.id
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <flow-ref name="getPedidos" doc:name="getPedidos"/>
+        <expression-component doc:name="Expression"><![CDATA[flowVars.pedidos.remove(payload.user)]]></expression-component>
+        <set-payload value="#[flowVars.pedidos]" doc:name="Set Payload"/>
+        <objectstore:store config-ref="ObjectStore__Connector" key="pedidos" value-ref="#[payload]" overwrite="true" doc:name="ObjectStore"/>
+    </flow>
+      <flow name="CerrarViejosPedidos">
+        <dw:transform-message doc:name="payload.ts -&gt; flowVars.ts">
+            <dw:set-variable variableName="ts"><![CDATA[%dw 1.0
+%output application/java
+---
+payload.ts]]></dw:set-variable>
+        </dw:transform-message>
+        <objectstore:retrieve config-ref="ObjectStore__Connector" key="ordenActual" defaultValue-ref="#[[:]]" doc:name="Retrieve [ordenActual]"/>
+        <scatter-gather doc:name="Scatter-Gather">
+            <objectstore:store config-ref="ObjectStore__Connector" key="ordenActual" value-ref="#[[flowVars.channel_id:flowVars.ts]]" overwrite="true" doc:name="Store [ordenActual]"/>
+            <foreach doc:name="For Each">
+                 <http:request config-ref="HTTP_Request_Configuration" path="/chat.update" method="GET" doc:name="Slack - chat.update">
+                <http:request-builder>
+                        <http:query-param paramName="token" value="${slack.token}"/>
+                        <http:query-param paramName="text" value="#['Pedido Cerrado']"/>
+                        <http:query-param paramName="channel" value="#[flowVars.key]"/>
+                        <http:query-param paramName="ts" value="#[payload]"/>
+                        <http:query-param paramName="attachments" value="#[&quot;[]&quot;]"/>
+                </http:request-builder>
+            </http:request>
+            </foreach>
+        </scatter-gather>
+    </flow>
+    <flow name="NotificarOrganizador">
+        <objectstore:retrieve config-ref="ObjectStore__Connector" key="organizador" doc:name="Retrieve [organizador]"/>
+        <set-variable variableName="UUID" value="#[java.util.UUID.randomUUID().toString()]" doc:name="flowVars.UUID"/>
+        <objectstore:store config-ref="ObjectStore__Connector" key="orgUUID" value-ref="#[flowVars.UUID]" overwrite="true" doc:name="Store [flowVars.UUID -&gt; orgUUID]"/>
+        <http:request config-ref="HTTP_Request_Configuration" path="im.open" method="GET" doc:name="Slack --- im.open">
+            <http:request-builder>
+                <http:query-param paramName="token" value="${slack.token}"/>
+                <http:query-param paramName="user" value="#[payload]"/>
+            </http:request-builder>
+        </http:request>
+        <dw:transform-message doc:name="payload.channel.id -&gt; payload">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload.channel.id]]></dw:set-payload>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Request_Configuration" path="chat.postMessage" method="GET" doc:name="HTTP">
+            <http:request-builder>
+                <http:query-param paramName="token" value="${slack.token}"/>
+                <http:query-param paramName="channel" value="#[payload]"/>
+                <http:query-param paramName="text" value="#['Sos organizador! La pagina de administraci&#243;n es https://donna-bot-mock.cloudhub.io/pane?id=' + flowVars.UUID]"/>
+            </http:request-builder>
+        </http:request>
+    </flow>
+    <flow name="CalculateOrder" processingStrategy="synchronous">
+        <objectstore:retrieve config-ref="ObjectStore__Connector" key="pedidos" targetProperty="pedidos" doc:name="Retrieve [pedidos]"/>
+        <flow-ref name="getMenu" doc:name="getMenu"/>
+        <dw:transform-message metadata:id="aff18e8b-e994-450c-ae7d-6713949fde83" doc:name="Transform Menu">
+            <dw:input-payload doc:sample="menu.json"/>
+            <dw:set-variable variableName="menu"><![CDATA[%dw 1.0
+%output application/java
+---
+flowVars.menu map (val, pos) -> {
+	(val.name) : val.price
+} reduce ((val, acc = {}) -> acc ++ val)]]></dw:set-variable>
+        </dw:transform-message>
+        <component class="com.github.estebanwasinger.OrderCalculator" doc:name="Calculate Order"/>
+    </flow>
+    </mule>

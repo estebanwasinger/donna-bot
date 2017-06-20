@@ -1,0 +1,37 @@
+{
+  "U03NE28RL": {
+    "platos": [
+      {
+        "fechaPedido": {
+          "year": 2017,
+          "dayOfYear": 161,
+          "nano": 273000000,
+          "minute": 11,
+          "second": 28,
+          "dayOfWeek": "SATURDAY",
+          "month": "JUNE",
+          "hour": 21,
+          "dayOfMonth": 10,
+          "monthValue": 6
+        },
+        "plato": "Ens. Salmon Fresco"
+      },
+      {
+        "fechaPedido": {
+          "year": 2017,
+          "dayOfYear": 161,
+          "nano": 719000000,
+          "minute": 59,
+          "second": 35,
+          "dayOfWeek": "SATURDAY",
+          "month": "JUNE",
+          "hour": 22,
+          "dayOfMonth": 10,
+          "monthValue": 6
+        },
+        "plato": "Katsukare"
+      }
+    ],
+    "paid": false
+  }
+}
