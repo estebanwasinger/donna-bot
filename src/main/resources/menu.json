@@ -16,7 +16,12 @@
   },
   {
     "name": "Sushi 12 (Rolls)",
-    "price": 180,
+    "price": 140,
+    "emoji" : "sushi"
+  },
+  {
+    "name": "Sushi 12 (Rolls sin atun)",
+    "price": 140,
     "emoji" : "sushi"
   },
   {
