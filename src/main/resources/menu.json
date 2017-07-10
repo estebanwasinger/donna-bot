@@ -1,27 +1,27 @@
 [
   {
     "name": "Katsukare",
-    "price": 110,
+    "price": 120,
     "emoji" : "curry"
   },
   {
     "name": "Tonkatsu",
-    "price": 110,
+    "price": 120,
     "emoji" : "stew"
   },
   {
     "name": "Sushi 8 Piezas",
-    "price": 110,
+    "price": 120,
     "emoji" : "sushi"
   },
   {
     "name": "Sushi 12 (Rolls)",
-    "price": 140,
+    "price": 150,
     "emoji" : "sushi"
   },
   {
     "name": "Sushi 12 (Rolls sin atun)",
-    "price": 140,
+    "price": 150,
     "emoji" : "sushi"
   },
   {
