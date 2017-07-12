@@ -178,7 +178,7 @@ flowVars.buttons
 %output application/json
 ---
 [{
-	text: "*Menu* : \n " ++ (flowVars.menu[-1 to 0] reduce ((val, acc = "\n") -> '*»* :$(val.emoji): $(val.name): \$$(val.price) \n $(acc)')),
+	text: (flowVars.menu[-1 to 0] reduce ((val, acc = "\n") -> '*»* :$(val.emoji): $(val.name): \$$(val.price) \n $(acc)')),
 	mrkdwn_in: ["text", "pretext"]
 }]
 ]]></dw:set-payload>

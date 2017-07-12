@@ -113,7 +113,7 @@ payload.channel_id]]></dw:set-variable>
                             <http:query-param paramName="token" value="${slack.token}"/>
                             <http:query-param paramName="channel" value="#[flowVars.channel_id]"/>
                             <http:query-param paramName="attachments" value="#[payload]"/>
-                            <http:query-param paramName="text" value="*..*"/>
+                            <http:query-param paramName="text" value="*Menu:*"/>
                 </http:request-builder></http:request>
                 </processor-chain>
             </enricher>
@@ -131,15 +131,11 @@ payload.channel_id]]></dw:set-variable>
         <set-payload value="#[&quot;&quot;]" doc:name="Empty Response"/>
     </flow>
     <flow name="createInitialMessage" processingStrategy="synchronous">
-        <enricher source="#[payload]" target="#[flowVars.menuPrecios]" doc:name="Message Enricher">
-            <flow-ref name="getPreciosAttachment" doc:name="getPreciosAttachment"/>
-        </enricher>
         <flow-ref name="Create-Button-Attachments" doc:name="Create-Button-Attachments"/>
         <dw:transform-message doc:name="Add Pedidos y Total">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/json
 ---
-flowVars.menuPrecios ++
 payload ++ 
 [
 	{
@@ -275,28 +271,27 @@ payload]]></dw:set-payload>
         <byte-array-to-string-transformer doc:name="Byte Array to String"/>
         <objectstore:store config-ref="ObjectStore__Connector" key="menuJson" value-ref="#[payload]" overwrite="true" doc:name="store [menuJson]"/>
     </flow>
+    <flow name="donna-bot-mavenFlow">
+        <poll doc:name="Jueves a las 9AM">
+            <schedulers:cron-scheduler expression="${cron.expression}" timeZone="GMT-03:00"/>
+            <logger message="Iniciando pedido" level="INFO" doc:name="Logger"/>
+        </poll>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	"channel_id" : p('slack.channelId')
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <flow-ref name="/iniciarPedido" doc:name="/iniciarPedido"/>
+    </flow>
     <flow name="donna-bot-mavenFlow2">
         <poll doc:name="Poll">
             <fixed-frequency-scheduler frequency="1" timeUnit="DAYS"/>
             <objectstore:remove config-ref="ObjectStore__Connector" key="users.list" ignoreNotExists="true" doc:name="Remove [users.list]"/>
         </poll>
         <logger message="Removed 'users.list'" level="INFO" doc:name="Logger"/>
-    </flow>
-    <flow name="donna-bot-mavenFlow4" initialState="started">
-        <quartz:inbound-endpoint jobName="someName" cronExpression="${cron.expression}" cronTimeZone="GMT-3" repeatInterval="0" responseTimeout="10000" doc:name="Quartz">
-            <quartz:event-generator-job>
-                <quartz:payload>jjjjjj</quartz:payload>
-            </quartz:event-generator-job>
-        </quartz:inbound-endpoint>
-        <dw:transform-message doc:name="Transform Message">
-            <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
----
-{
-	"channel_id" : "G03R6ABL2"
-}]]></dw:set-payload>
-        </dw:transform-message>
-        <flow-ref name="/iniciarPedido" doc:name="/iniciarPedido"/>
     </flow>
 
 </mule>
