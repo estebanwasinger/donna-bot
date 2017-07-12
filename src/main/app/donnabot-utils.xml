@@ -29,6 +29,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
                     </otherwise>
                 </choice>
                 <set-payload value="#[payload]" mimeType="application/json" doc:name="to application/json"/>
+                <logger message="#[payload]" level="DEBUG" category="MENU.JSON" doc:name="Logger"/>
             </processor-chain>
         </enricher>
     </flow>
@@ -79,7 +80,7 @@ payload.members map (val, pos) -> {
         <flow-ref name="getMenu" doc:name="getMenu"/>
         <dw:transform-message metadata:id="8f860711-d493-4596-a006-b4230e6a8bd2" doc:name="Create Actions">
             <dw:input-payload doc:sample="menu.json"/>
-            <dw:input-variable variableName="menu"/>
+            <dw:input-variable variableName="menu" doc:sample="menu.json"/>
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/json
 ---
@@ -113,24 +114,24 @@ flowVars.menu map ((val , key) -> {
 %var getConditional = (condition, soThen, orOtherwise) -> soThen when (condition) otherwise orOtherwise
 %var elements = payload
 %var pageSize = 5
-%var lastPageNumber = ((sizeOf elements) / pageSize)[0] as :number
+%var lastPageNumber = ceil ((sizeOf elements) / pageSize) as :number
 %var lastPageSize = (sizeOf elements) mod pageSize
+%var lastPageSizeSafe = getConditional(lastPageSize == 0, pageSize, lastPageSize)
+%var pages = 0 to lastPageNumber - 1
 %var buttons = (elements map (key, pos) -> elements[pos*pageSize to getConditional(pos == lastPageNumber, pos*pageSize + lastPageSize-1,pos*pageSize + pageSize-1)]) filter ($ != null)
 ---
-((getConditional((sizeOf buttons) > lastPageSize, buttons[0 to -2], buttons))
+(pages map (key, pos) -> payload[pos * pageSize to getConditional(pos == lastPageNumber - 1, pos * pageSize + lastPageSizeSafe - 1, pos * pageSize + pageSize - 1)])
 	map {
     actions : $,
     callback_id: "Elegir Plato",
     fallback: "Elegir Plato",
     color : "#ffd000"
-})
+}
+
 ]]></dw:set-payload>
         </dw:transform-message>
     </flow>
      <flow name="CreateEntireMessage" processingStrategy="synchronous">
-        <enricher source="#[payload]" target="#[flowVars.menuPrecios]" doc:name="payload -&gt; flowVars.menuPrecios">
-            <flow-ref name="getPreciosAttachment" doc:name="getPreciosAttachment"/>
-        </enricher>
         <enricher source="#[payload]" target="#[flowVars.buttons]" doc:name="payload -&gt; flowVars.buttons">
             <flow-ref name="Create-Button-Attachments" doc:name="Create-Button-Attachments"/>
         </enricher>
@@ -153,8 +154,6 @@ flowVars.menu map ((val , key) -> {
 %var getConditional = (condition, soThen, orOtherwise) -> soThen when (condition) otherwise orOtherwise
 %var defaultMessage = '<@$(flowVars.organizador)>'
 ---
-flowVars.menuPrecios
-++
 flowVars.buttons
 ++ 
 [
@@ -279,5 +278,14 @@ flowVars.menu map (val, pos) -> {
 } reduce ((val, acc = {}) -> acc ++ val)]]></dw:set-variable>
         </dw:transform-message>
         <component class="com.github.estebanwasinger.OrderCalculator" doc:name="Calculate Order"/>
+    </flow>
+    
+      <flow name="youAreTheRealMVP" processingStrategy="asynchronous">
+                            <http:request config-ref="HTTP_Request_Configuration" path="/chat.postMessage" method="POST" doc:name="You Are the real MVP">
+                    <http:request-builder>
+                <http:query-param paramName="token" value="${slack.token}"/>
+                <http:query-param paramName="channel" value="#[flowVars.channel_id]"/>
+                <http:query-param paramName="text" value="#['&lt;@' + flowVars.user_id + '&gt; you are the real MVP! :mvp: ']"/>
+                </http:request-builder></http:request>
     </flow>
     </mule>

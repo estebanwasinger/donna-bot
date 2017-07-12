@@ -25,6 +25,12 @@
   },
   {
     "name": "Menu",
+    "text": ":sushi: Sushi 12 (Rolls sin atun)",
+    "type": "button",
+    "value": "Sushi 12 (Rolls sin atun)"
+  },
+  {
+    "name": "Menu",
     "text": ":sushi: Sushi 12 (Rolls + Nigiri)",
     "type": "button",
     "value": "Sushi 12 (Rolls + Nigiri)"
