@@ -67,6 +67,7 @@ payload.original_message.text]]></dw:set-variable>
                 </when>
                 <when expression="#[flowVars.action.startsWith(&quot;Organizar&quot;)]">
                     <objectstore:store config-ref="ObjectStore__Connector" key="organizador" value-ref="#[flowVars.user_id]" overwrite="true" doc:name="Store [organizador]"/>
+                    <flow-ref name="youAreTheRealMVP" doc:name="youAreTheRealMVP"/>
                     <flow-ref name="NotificarOrganizador" doc:name="NotificarOrganizador"/>
                 </when>
                 <otherwise>
@@ -104,6 +105,18 @@ payload.original_message.text]]></dw:set-variable>
 ---
 payload.channel_id]]></dw:set-variable>
             </dw:transform-message>
+            <enricher source="#[payload]" target="#[flowVars.someVar]" doc:name="Message Enricher">
+                <processor-chain doc:name="Processor Chain">
+                    <flow-ref name="getPreciosAttachment" doc:name="getPreciosAttachment"/>
+                    <http:request config-ref="HTTP_Request_Configuration" path="/chat.postMessage" method="POST" doc:name="Post Menu">
+                    <http:request-builder>
+                            <http:query-param paramName="token" value="${slack.token}"/>
+                            <http:query-param paramName="channel" value="#[flowVars.channel_id]"/>
+                            <http:query-param paramName="attachments" value="#[payload]"/>
+                            <http:query-param paramName="text" value="*..*"/>
+                </http:request-builder></http:request>
+                </processor-chain>
+            </enricher>
             <flow-ref name="createInitialMessage" doc:name="createInitialMessage"/>
             <http:request config-ref="HTTP_Request_Configuration" path="/chat.postMessage" method="POST" doc:name="Post Message with Buttons">
                 <http:request-builder>

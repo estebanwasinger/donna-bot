@@ -106,3 +106,8 @@ Temporary Items
 .apdisk
 
 # End of https://www.gitignore.io/api/linux,macos,intellij
+
+/target
+.project
+.classpath
+.settings
