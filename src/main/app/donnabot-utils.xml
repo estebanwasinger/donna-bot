@@ -132,9 +132,6 @@ flowVars.menu map ((val , key) -> {
         </dw:transform-message>
     </flow>
      <flow name="CreateEntireMessage" processingStrategy="synchronous">
-        <enricher source="#[payload]" target="#[flowVars.buttons]" doc:name="payload -&gt; flowVars.buttons">
-            <flow-ref name="Create-Button-Attachments" doc:name="Create-Button-Attachments"/>
-        </enricher>
         <enricher source="#[payload]" target="#[flowVars.message]" doc:name="payload -&gt; flowVars.message">
             <processor-chain doc:name="Processor Chain">
                 <flow-ref name="getPedidos" doc:name="getPedidos"/>
@@ -154,8 +151,6 @@ flowVars.menu map ((val , key) -> {
 %var getConditional = (condition, soThen, orOtherwise) -> soThen when (condition) otherwise orOtherwise
 %var defaultMessage = '<@$(flowVars.organizador)>'
 ---
-flowVars.buttons
-++ 
 [
 	{
 		text : flowVars.message, 
@@ -185,7 +180,9 @@ flowVars.buttons
         </dw:transform-message>
     </flow>
     <flow name="ObtenerOrganizador">
-        <objectstore:retrieve config-ref="ObjectStore__Connector" key="organizador" defaultValue-ref="#[&quot;&quot;]" targetProperty="organizador" doc:name="ObjectStore"/>
+        <enricher source="#[payload]" target="#[flowVars.organizador]" doc:name="Message Enricher">
+            <objectstore:retrieve config-ref="ObjectStore__Connector" key="organizador" defaultValue-ref="#[&quot;&quot;]" doc:name="ObjectStore"/>
+        </enricher>
     </flow>
         <flow name="AgregarNuevoPedido" processingStrategy="synchronous">
         <dw:transform-message metadata:id="5659b116-b54a-4eb5-aa94-92effcb8dc69" doc:name="Transform Message">
@@ -219,20 +216,14 @@ flowVars.buttons
         <objectstore:store config-ref="ObjectStore__Connector" key="pedidos" value-ref="#[payload]" overwrite="true" doc:name="ObjectStore"/>
     </flow>
       <flow name="CerrarViejosPedidos">
-        <dw:transform-message doc:name="payload.ts -&gt; flowVars.ts">
-            <dw:set-variable variableName="ts"><![CDATA[%dw 1.0
-%output application/java
----
-payload.ts]]></dw:set-variable>
-        </dw:transform-message>
         <objectstore:retrieve config-ref="ObjectStore__Connector" key="ordenActual" defaultValue-ref="#[[:]]" doc:name="Retrieve [ordenActual]"/>
         <scatter-gather doc:name="Scatter-Gather">
-            <objectstore:store config-ref="ObjectStore__Connector" key="ordenActual" value-ref="#[[flowVars.channel_id:flowVars.ts]]" overwrite="true" doc:name="Store [ordenActual]"/>
+            <objectstore:store config-ref="ObjectStore__Connector" key="ordenActual" value-ref="#[[flowVars.channel_id:flowVars.buttonsTs]]" overwrite="true" doc:name="Store [ordenActual]"/>
             <foreach doc:name="For Each">
                  <http:request config-ref="HTTP_Request_Configuration" path="/chat.update" method="GET" doc:name="Slack - chat.update">
                 <http:request-builder>
                         <http:query-param paramName="token" value="${slack.token}"/>
-                        <http:query-param paramName="text" value="#['Pedido Cerrado']"/>
+                        <http:query-param paramName="text" value="#['*Pedido Cerrado*!']"/>
                         <http:query-param paramName="channel" value="#[flowVars.key]"/>
                         <http:query-param paramName="ts" value="#[payload]"/>
                         <http:query-param paramName="attachments" value="#[&quot;[]&quot;]"/>
@@ -266,7 +257,9 @@ payload.channel.id]]></dw:set-payload>
         </http:request>
     </flow>
     <flow name="CalculateOrder" processingStrategy="synchronous">
-        <objectstore:retrieve config-ref="ObjectStore__Connector" key="pedidos" targetProperty="pedidos" doc:name="Retrieve [pedidos]"/>
+        <enricher source="#[payload]" target="#[flowVars.pedidos]" doc:name="Message Enricher">
+            <objectstore:retrieve config-ref="ObjectStore__Connector" key="pedidos" defaultValue-ref="#[new java.util.HashMap()]" doc:name="Retrieve [pedidos]"/>
+        </enricher>
         <flow-ref name="getMenu" doc:name="getMenu"/>
         <dw:transform-message metadata:id="aff18e8b-e994-450c-ae7d-6713949fde83" doc:name="Transform Menu">
             <dw:input-payload doc:sample="menu.json"/>

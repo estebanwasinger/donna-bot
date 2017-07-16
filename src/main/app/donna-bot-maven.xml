@@ -1,38 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:quartz="http://www.mulesoft.org/schema/mule/quartz" xmlns:schedulers="http://www.mulesoft.org/schema/mule/schedulers" xmlns:tls="http://www.mulesoft.org/schema/mule/tls" 
-xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore"
-xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking"
-  xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" 
-  xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" 
-  xmlns:http="http://www.mulesoft.org/schema/mule/http" 
-  xmlns="http://www.mulesoft.org/schema/mule/core" 
-  xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans" 
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:schedulers="http://www.mulesoft.org/schema/mule/schedulers" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:objectstore="http://www.mulesoft.org/schema/mule/objectstore" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
-http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
-http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
-http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
 http://www.mulesoft.org/schema/mule/schedulers http://www.mulesoft.org/schema/mule/schedulers/current/mule-schedulers.xsd
-http://www.mulesoft.org/schema/mule/quartz http://www.mulesoft.org/schema/mule/quartz/current/mule-quartz.xsd">
-     <!-- <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>  -->
-     <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="${https.port}" doc:name="HTTP Listener Configuration" protocol="HTTPS">
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/objectstore http://www.mulesoft.org/schema/mule/objectstore/current/mule-objectstore.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <!-- <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/> -->
+    
+   <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="${https.port}" doc:name="HTTP Listener Configuration" protocol="HTTPS">
         <tls:context>
             <tls:key-store path="serverKeystore" keyPassword="mulepassword" password="mulepassword"/>
         </tls:context>
      </http:listener-config>
+    
     <http:request-config name="HTTP_Request_Configuration" protocol="HTTPS" host="slack.com" port="443" basePath="/api" doc:name="HTTP Request Configuration"/>
-    <objectstore:config name="ObjectStore__Connector" persistent="true" doc:name="ObjectStore: Connector"/>
+    <objectstore:config name="ObjectStore__Connector" partition="someName" persistent="true" doc:name="ObjectStore: Connector"/>
     <flow name="ReceiveButtonNotification">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/action" doc:name="/action"/>
         <async doc:name="Async">
             <set-payload value="#[payload.payload]" mimeType="application/json" doc:name="Set Payload"/>
             <logger message="#[payload]" level="INFO" doc:name="Log Button Request"/>
-            <dw:transform-message metadata:id="5f2f2529-1a5e-4803-8536-e46eec17840b" doc:name="flowVars.action">
+            <dw:transform-message doc:name="flowVars.action" metadata:id="5f2f2529-1a5e-4803-8536-e46eec17840b">
                 <dw:input-payload/>
                 <dw:set-variable variableName="action"><![CDATA[%dw 1.0
 %output application/java
@@ -78,20 +70,20 @@ payload.original_message.text]]></dw:set-variable>
                     </enricher>
                 </otherwise>
             </choice>
+            <objectstore:retrieve config-ref="ObjectStore__Connector" key="#[flowVars.ts]" targetProperty="pedidosTs" doc:name="Retrieve using actual ts"  />
             <flow-ref name="CreateEntireMessage" doc:name="CreateEntireMessage"/>
             <http:request config-ref="HTTP_Request_Configuration" path="/chat.update" method="POST" doc:name="Slack - chat.update">
                 <http:request-builder>
                     <http:query-param paramName="token" value="${slack.token}"/>
                     <http:query-param paramName="text" value="#[flowVars.text]"/>
                     <http:query-param paramName="channel" value="#[flowVars.channel_id]"/>
-                    <http:query-param paramName="ts" value="#[flowVars.ts]"/>
+                    <http:query-param paramName="ts" value="#[flowVars.pedidosTs]"/>
                     <http:query-param paramName="attachments" value="#[payload]"/>
                 </http:request-builder>
             </http:request>
         </async>
         <set-payload value="#[&quot;&quot;]" doc:name="Return Empty Menssage"/>
     </flow>
-  
     <flow name="/iniciarPedido">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/iniciarPedido" doc:name="/iniciarPedido"/>
         <async doc:name="Async">
@@ -109,12 +101,13 @@ payload.channel_id]]></dw:set-variable>
                 <processor-chain doc:name="Processor Chain">
                     <flow-ref name="getPreciosAttachment" doc:name="getPreciosAttachment"/>
                     <http:request config-ref="HTTP_Request_Configuration" path="/chat.postMessage" method="POST" doc:name="Post Menu">
-                    <http:request-builder>
+                        <http:request-builder>
                             <http:query-param paramName="token" value="${slack.token}"/>
                             <http:query-param paramName="channel" value="#[flowVars.channel_id]"/>
                             <http:query-param paramName="attachments" value="#[payload]"/>
                             <http:query-param paramName="text" value="*Menu:*"/>
-                </http:request-builder></http:request>
+                        </http:request-builder>
+                    </http:request>
                 </processor-chain>
             </enricher>
             <flow-ref name="createInitialMessage" doc:name="createInitialMessage"/>
@@ -126,26 +119,35 @@ payload.channel_id]]></dw:set-variable>
                     <http:query-param paramName="text" value="*Abrimos los pedidos!!!*"/>
                 </http:request-builder>
             </http:request>
+            <dw:transform-message doc:name="payload.ts -&gt; flowVars.buttonsTs" metadata:id="47cbe072-8143-4e7a-a985-993c66415209">
+                <dw:input-payload mimeType="application/json"/>
+                <dw:set-variable variableName="buttonsTs"><![CDATA[%dw 1.0
+%output application/java
+---
+payload.ts]]></dw:set-variable>
+            </dw:transform-message>
+            <flow-ref name="CreateEntireMessage" doc:name="CreateEntireMessage"/>
+            <http:request config-ref="HTTP_Request_Configuration" path="/chat.postMessage" method="POST" doc:name="Post Pedidos Actuales">
+                <http:request-builder>
+                    <http:query-param paramName="token" value="${slack.token}"/>
+                    <http:query-param paramName="channel" value="#[flowVars.channel_id]"/>
+                    <http:query-param paramName="attachments" value="#[payload]"/>
+                </http:request-builder>
+            </http:request>
+            <dw:transform-message doc:name="Transform Message" metadata:id="c7bc0295-860e-4ae4-a8de-30aaca4f7821">
+                <dw:input-payload mimeType="application/json"/>
+                <dw:set-variable variableName="pedidosTs"><![CDATA[%dw 1.0
+%output application/java
+---
+payload.ts]]></dw:set-variable>
+            </dw:transform-message>
+            <objectstore:store config-ref="ObjectStore__Connector" key="#[flowVars.buttonsTs]" value-ref="#[flowVars.pedidosTs]" overwrite="true" doc:name="Store [flowVars.buttonsTs -&gt; flowVars.pedidosTs]"/>
             <flow-ref name="CerrarViejosPedidos" doc:name="CerrarViejosPedidos"/>
         </async>
         <set-payload value="#[&quot;&quot;]" doc:name="Empty Response"/>
     </flow>
     <flow name="createInitialMessage" processingStrategy="synchronous">
         <flow-ref name="Create-Button-Attachments" doc:name="Create-Button-Attachments"/>
-        <dw:transform-message doc:name="Add Pedidos y Total">
-            <dw:set-payload><![CDATA[%dw 1.0
-%output application/json
----
-payload ++ 
-[
-	{
-		text: 'Pedidos:'
-	}, 
-	{
-		text : 'Total:'
-	}
-]]]></dw:set-payload>
-        </dw:transform-message>
     </flow>
     <flow name="getPedidosResume">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/pedidos" doc:name="/pedidos"/>
@@ -203,38 +205,44 @@ flowVars.pedidos mapObject {
     </flow>
     <flow name="MarcarPedidoComoPagado">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/pedidos/{userId}" doc:name="GET: /pedidos/{userId}"/>
-        <set-variable variableName="givenUUID" value="#[message.inboundProperties.'http.query.params'.get('id')]" doc:name="Grab ID Query Param" />
+        <set-variable variableName="givenUUID" value="#[message.inboundProperties.'http.query.params'.get('id')]" doc:name="Grab ID Query Param"/>
         <objectstore:retrieve config-ref="ObjectStore__Connector" key="orgUUID" defaultValue-ref="#['']" targetProperty="UUID" doc:name="Retrieve [orgUUID -&gt; flowVars.UUID]"/>
         <choice doc:name="Choice">
             <when expression="#[flowVars.givenUUID.equals(flowVars.UUID)]">
                 <set-variable variableName="user_id" value="#[message.inboundProperties.'http.uri.params'.get('userId')]" doc:name="flowVars.user_id"/>
-        <flow-ref name="getPedidos" doc:name="getPedidos"/>
-        <expression-component doc:name="Change Pay Status"><![CDATA[flowVars.pedidos.get(flowVars.user_id).pagar()]]></expression-component>
-        <set-payload value="#[flowVars.pedidos]" doc:name="flowVars.pedidos -&gt; payload"/>
-        <objectstore:store config-ref="ObjectStore__Connector" key="pedidos" value-ref="#[payload]" overwrite="true" doc:name="Store [pedidos]"/>
-        <async doc:name="Async">
+                <flow-ref name="getPedidos" doc:name="getPedidos"/>
+                <expression-component doc:name="Change Pay Status"><![CDATA[flowVars.pedidos.get(flowVars.user_id).pagar()]]></expression-component>
+                <set-payload value="#[flowVars.pedidos]" doc:name="flowVars.pedidos -&gt; payload"/>
+                <objectstore:store config-ref="ObjectStore__Connector" key="pedidos" value-ref="#[payload]" overwrite="true" doc:name="Store [pedidos]"/>
+                <async doc:name="Async">
                     <flow-ref name="/updateSlack" doc:name="/updateSlack"/>
-        </async>
-        <dw:transform-message doc:name="Transform Message">
-            <dw:set-payload><![CDATA[%dw 1.0
+                </async>
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:set-payload><![CDATA[%dw 1.0
 %output application/json
 ---
 {
 	"ok" : true
 }]]></dw:set-payload>
-        </dw:transform-message>
+                </dw:transform-message>
             </when>
             <otherwise>
                 <set-payload value="#['Unauthorized']" doc:name="Unauthorized"/>
             </otherwise>
         </choice>
-        
     </flow>
     <flow name="/updateSlack">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/" doc:name="/updatePedido"/>
         <flow-ref name="CreateEntireMessage" doc:name="CreateEntireMessage"/>
-        <objectstore:retrieve config-ref="ObjectStore__Connector" key="ts" targetProperty="ts" doc:name="Retrieve [ts]"/>
-        <objectstore:retrieve config-ref="ObjectStore__Connector" key="channel_id" targetProperty="channel_id" doc:name="Retrieve [channel_id]"/>
+        <enricher source="#[payload]" target="#[flowVars.ts]" doc:name="Message Enricher">
+            <processor-chain doc:name="Processor Chain">
+                <objectstore:retrieve config-ref="ObjectStore__Connector" key="ts" doc:name="Retrieve [ts]"/>
+                <objectstore:retrieve config-ref="ObjectStore__Connector" key="#[payload]" doc:name="ObjectStore"/>
+            </processor-chain>
+        </enricher>
+        <enricher source="#[payload]" target="#[flowVars.channel_id]" doc:name="Message Enricher">
+            <objectstore:retrieve config-ref="ObjectStore__Connector" key="channel_id" doc:name="Retrieve [channel_id]"/>
+        </enricher>
         <http:request config-ref="HTTP_Request_Configuration" path="/chat.update" method="GET" doc:name="Slack - chat.update">
             <http:request-builder>
                 <http:query-param paramName="token" value="${slack.token}"/>
@@ -245,10 +253,9 @@ flowVars.pedidos mapObject {
             </http:request-builder>
         </http:request>
     </flow>
-
     <flow name="GenerateAdminPage">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/pane" doc:name="GET: /pane"/>
-        <set-variable value="#[message.inboundProperties.'http.query.params'.get('id')]" doc:name="Grab ID Query Param" variableName="givenUUID"/>
+        <set-variable variableName="givenUUID" value="#[message.inboundProperties.'http.query.params'.get('id')]" doc:name="Grab ID Query Param"/>
         <objectstore:retrieve config-ref="ObjectStore__Connector" key="orgUUID" defaultValue-ref="#[-1]" targetProperty="orgUUID" doc:name="Retrieve [orgUUID -&gt; flowVars.UUID]"/>
         <choice doc:name="Matches UUID?">
             <when expression="#[flowVars.orgUUID != -1 &amp;&amp; flowVars.orgUUID.equals(flowVars.givenUUID)]">
@@ -267,7 +274,7 @@ payload]]></dw:set-payload>
         </choice>
     </flow>
     <flow name="UpdateMenu">
-        <http:listener config-ref="HTTP_Listener_Configuration" path="/menu" doc:name="POST: /menu" allowedMethods="POST"/>
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/menu" allowedMethods="POST" doc:name="POST: /menu"/>
         <byte-array-to-string-transformer doc:name="Byte Array to String"/>
         <objectstore:store config-ref="ObjectStore__Connector" key="menuJson" value-ref="#[payload]" overwrite="true" doc:name="store [menuJson]"/>
     </flow>
@@ -286,6 +293,38 @@ payload]]></dw:set-payload>
         </dw:transform-message>
         <flow-ref name="/iniciarPedido" doc:name="/iniciarPedido"/>
     </flow>
+    <flow name="donna-bot-mavenFlow3" initialState="stopped">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/localTest" doc:name="HTTP"/>
+        <flow-ref name="donna-bot-mavenFlow" doc:name="donna-bot-mavenFlow"/>
+    </flow>
+    <flow name="donna-bot-mavenFlow4" initialState="stopped">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/os/keys" doc:name="HTTP"/>
+        <objectstore:retrieve-all-keys config-ref="ObjectStore__Connector" doc:name="ObjectStore"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="donna-bot-mavenFlow5" initialState="stopped">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/os/retrieve" doc:name="HTTP"/>
+        <objectstore:retrieve config-ref="ObjectStore__Connector" key="#[message.inboundProperties.'http.query.params'.get('key')]" doc:name="ObjectStore"/>
+        <set-variable variableName="asJson" value="#[message.inboundProperties.'http.query.params'.getOrDefault('asJson','false')]" doc:name="Variable"/>
+        <choice doc:name="Choice">
+            <when expression="#[asJson.equals('true')]">
+                <dw:transform-message doc:name="Transform Message">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+                </dw:transform-message>
+            </when>
+            <otherwise>
+                <logger level="INFO" doc:name="Logger"/>
+            </otherwise>
+        </choice>
+    </flow>
     <flow name="donna-bot-mavenFlow2">
         <poll doc:name="Poll">
             <fixed-frequency-scheduler frequency="1" timeUnit="DAYS"/>
@@ -293,5 +332,4 @@ payload]]></dw:set-payload>
         </poll>
         <logger message="Removed 'users.list'" level="INFO" doc:name="Logger"/>
     </flow>
-
 </mule>
