@@ -34,12 +34,19 @@ public class OrderCalculator implements Callable {
 
         int totalPlata = totalPorPlato.entrySet().stream().mapToInt(entry -> menu.get(entry.getKey()) * entry.getValue()).sum();
 
+        int totalRecaudado = pedidos.entrySet().stream()
+                .map(Map.Entry::getValue)
+                .filter(Pedido::isPaid)
+                .flatMap(pedido -> pedido.getPlatos().stream())
+                .mapToInt(plato -> menu.get(plato.getPlato()))
+                .sum();
+
         String totalPorPlatoMsg = totalPorPlato.entrySet()
                 .stream()
                 .map(entry -> format("*» %s* : %s", entry.getKey(), entry.getValue()))
                 .collect(joining("\n", "", "\n"));
 
-        String totalPlatosMsg = format("*Cantidad Platos:* %s   *Total:* $%s", totalPlatos, totalPlata);
+        String totalPlatosMsg = format("*Cantidad Platos:* %s   *Total:* $%s \n*Total Recaudado*: $%s", totalPlatos, totalPlata, totalRecaudado);
 
         MuleMessage message = eventContext.getMessage();
         message.setInvocationProperty("order", totalPorPlatoMsg + "\n" + totalPlatosMsg);
